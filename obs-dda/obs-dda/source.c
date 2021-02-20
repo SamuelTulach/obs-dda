@@ -14,6 +14,7 @@ struct obs_source_info dda_source =
     .get_name = dda_getname,
     .create = dda_create,
     .destroy = dda_destroy,
+    .get_properties = dda_properties,
 };
 
 struct dda_thread_info
@@ -109,4 +110,22 @@ static void dda_destroy(void* data)
         os_event_destroy(thread_info->stop_signal);
         bfree(thread_info);
     }
+}
+
+static bool display_settings_changed(obs_properties_t* props, obs_property_t* p, obs_data_t* settings)
+{
+    //obs_properties_get(props, "display_number");
+    int display = obs_data_get_int(settings, "display_number");
+    capture_change_display(display);
+}
+
+static obs_properties_t* dda_properties(void* data)
+{
+    obs_properties_t* props = obs_properties_create();
+
+    obs_property_t* p = obs_properties_add_int(props, "display_number", "Display to capture", 0, 10, 1);
+
+    obs_property_set_modified_callback(p, display_settings_changed);
+
+    return props;
 }

@@ -5,6 +5,8 @@
 #include <obs.h>
 #include "capture.h"
 
+bool running = false;
+
 ID3D11Device* capture_device;
 ID3D11DeviceContext* capture_context;
 
@@ -12,30 +14,33 @@ HDESK capture_desktop;
 
 IDXGIDevice* capture_dxgi;
 IDXGIAdapter* capture_adapter;
+
 IDXGIOutput* capture_output;
-int capture_display_number = 0;
+int capture_target_display = 0;
 
 IDXGIOutput1* capture_first_output;
 IDXGIOutputDuplication* capture_duplication;
 
-extern "C" int capture_init()
+void capture_destroy()
 {
+	capture_device->Release();
+	capture_device = nullptr;
+}
+
+extern "C" int capture_init()
+{	
 	D3D_FEATURE_LEVEL feature_level;
 	const D3D_FEATURE_LEVEL feature_level_array[2] = { D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0 };
 
 	if (D3D11CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, 0, feature_level_array, 2, D3D11_SDK_VERSION, &capture_device, &feature_level, &capture_context) != S_OK)
 		return false;
 
-	capture_desktop = OpenInputDesktop(0, FALSE, GENERIC_ALL);
 	if (!capture_desktop)
-		return false;
-
-	/*const auto attached = SetThreadDesktop(capture_desktop);
-	CloseDesktop(capture_desktop);
-	capture_desktop = NULL;
-	auto test = GetLastError();
-	if (!attached)
-		return false;*/
+	{
+		capture_desktop = OpenInputDesktop(0, FALSE, GENERIC_ALL);
+		if (!capture_desktop)
+			return false;
+	}
 
 	HRESULT status = capture_device->QueryInterface(__uuidof(IDXGIDevice), (void**)&capture_dxgi);
 	if (FAILED(status))
@@ -45,7 +50,7 @@ extern "C" int capture_init()
 	if (FAILED(status))
 		return false;
 
-	status = capture_adapter->EnumOutputs(capture_display_number, &capture_output);
+	status = capture_adapter->EnumOutputs(capture_target_display, &capture_output);
 	if (FAILED(status))
 		return false;
 
@@ -57,6 +62,7 @@ extern "C" int capture_init()
 	if (FAILED(status))
 		return false;
 
+	running = true;
 	return true;
 }
 
@@ -68,6 +74,9 @@ extern "C" capture_bitmap* capture_get_frame()
 {
 	// TODO: multiple frees missing in this function
 	
+	if (!running)
+		return &current_bitmap;
+
 	if (!capture_duplication)
 		return &current_bitmap;
 
@@ -139,4 +148,11 @@ extern "C" capture_bitmap* capture_get_frame()
 	current_bitmap.buffer = current_buffer;
 
 	return &current_bitmap;
+}
+
+extern "C" void capture_change_display(int target_display)
+{
+	running = false;
+	capture_target_display = target_display;
+	capture_init();
 }

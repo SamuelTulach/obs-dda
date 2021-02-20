@@ -144,7 +144,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <ControlFlowGuard>false</ControlFlowGuard>
       <AdditionalIncludeDirectories>C:\Users\person\Documents\OBS\obs-studio\libobs;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <Optimization>Disabled</Optimization>
+      <Optimization>MaxSpeed</Optimization>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
